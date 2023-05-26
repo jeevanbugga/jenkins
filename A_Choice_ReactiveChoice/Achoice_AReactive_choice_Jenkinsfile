@@ -1,0 +1,34 @@
+properties([
+  parameters([
+    string(defaultValue: 'invest', description: 'Provide Client name', name: 'Client'),
+    string(defaultValue: 'us-east-1', description: 'Select AWS Region', name: 'Region'),
+    string(defaultValue: '', description: 'Provide version in number', name: 'Version_Number'),
+    choice(choices: ['select_account','dev', 'prod'], description: 'Select AWS Account:', name: 'AWS_Account'),
+    [$class: 'CascadeChoiceParameter', choiceType: 'PT_SINGLE_SELECT', description: 'Select Cluster Name from the list', name: 'Cluster_Name', referencedParameters: 'AWS_Account', script: [$class: 'GroovyScript', script: [sandbox: false, script: '''
+        if (AWS_Account == 'dev') {
+          return ["select","invest-cluster", "investbvt-cluster", "investnonprod-cluster"]
+        } else if (AWS_Account == 'prod') {
+          return ["select","investprod-cluster"]
+        }
+      ''']]]
+  ])
+])
+
+pipeline {
+  agent {
+    label 'slave-03'
+  }
+  stages {
+    stage('PATCHING') {
+      steps {
+        echo "Client: ${params.Client}"
+        echo "Region: ${params.Region}"
+        echo "Version Number: ${params.Version_Number}"
+        echo "AWS Account: ${params.AWS_Account}"
+        echo "Cluster Name: ${params.Cluster_Name}"
+	sh "/bin/ksh /home/root/ansible/patching.ksh ${params.Client} ${params.Region} ${params.Cluster_Name} ${params.Version_Number} ${params.AWS_Account}"
+      }
+    }
+//You can add more stages here
+  }
+}
